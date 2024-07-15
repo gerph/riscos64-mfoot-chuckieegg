@@ -1,0 +1,779 @@
+/*>r6502lib.h
+ *
+ * BBC 6502 to RISC OS library code
+ * by Michel Foot.
+ * Version 1.01 (18 Apr 2001).
+ *
+ */
+
+/*#define __ORIGINAL__*/
+
+/*#define __JMP_BUF_SIZE 100*/
+
+/*#include <setjmp.h>*/
+#include <stdio.h>
+#include <time.h>
+#include "kernel.h"
+#include "swis.h"
+
+#define TIME_50HZ 2 /*CLK_TCK/50*/ /*50 times per second*/
+
+extern void bbcvdu(char);
+extern void getscreenaddress(void);
+#ifdef MODE_256
+extern void setmode256(void);
+#endif
+extern void osword(void);
+extern void oswrch(char c);
+extern void r6502adc(int);
+extern void r6502jsr(int);
+extern char r6502read(int);
+extern void r6502sbc(int);
+extern void r6502write(int,char);
+
+extern _kernel_swi_regs regs;
+extern clock_t timer, video_timer;
+
+extern char memory[0x10000];
+extern char r6502_a;
+extern char r6502_x;
+extern char r6502_y;
+extern char r6502_sp;
+extern char r6502_ps;
+extern int address;
+extern char value1, value2;
+extern char nlo, nhi;
+
+extern int loc_video_addr; /*screen address of local system*/
+extern int bbc_video_mode; /*bbc video_mode*/
+extern int bbc_video_addr; /*bbc video address*/
+
+extern int quit, escape;
+
+#define NFLAG 0x80
+#define VFLAG 0x40
+#define UFLAG 0x20
+#define BFLAG 0x10
+#define DFLAG 0x08
+#define IFLAG 0x04
+#define ZFLAG 0x02
+#define CFLAG 0x01
+#define NOTNFLAG 0x7F
+#define NOTVFLAG 0xBF
+#define NOTUFLAG 0xDF
+#define NOTBFLAG 0xEF
+#define NOTDFLAG 0xF7
+#define NOTIFLAG 0xFB
+#define NOTZFLAG 0xFD
+#define NOTCFLAG 0xFE
+
+#define STACK_START 0x100
+#define STACK_END 0x1FF
+
+#define AND &&
+#define NOT !
+#define OR ||
+#define TRUE 0xFF
+#define FALSE 0x00
+
+#define PROCESSORSTATUS(n) \
+  (r6502_ps | UFLAG | n);
+
+#define STACK_PUSH(n) \
+  memory[STACK_START+(r6502_sp--)] = n;
+
+#define STACK_POP(n) \
+  n = memory[STACK_START+(++r6502_sp)];
+
+#define SETFLAG(nflag) \
+  /*set bit*/ \
+  r6502_ps = (r6502_ps | nflag);
+
+#define CLEARFLAG(nflag) \
+  /*set bit*/ \
+  r6502_ps = (r6502_ps & ~nflag);
+
+#define SETNFLAG(n) \
+  /*clear bit 7 (N)*/ \
+  r6502_ps = (r6502_ps & NOTNFLAG); \
+  /*set bit 7 (N)*/ \
+  r6502_ps = (r6502_ps | (n & NFLAG));
+
+#define SETVFLAG(n) \
+  /*clear bit 6 (V)*/ \
+  r6502_ps = (r6502_ps & NOTVFLAG); \
+  /*set bit 6 (V)*/ \
+  r6502_ps = (r6502_ps | (n & VFLAG));
+
+#define SETBFLAG(n) \
+  /*clear bit 4 (B)*/ \
+  r6502_ps = (r6502_ps & NOTBFLAG); \
+  /*set bit 4 (B)*/ \
+  r6502_ps = (r6502_ps | (n & BFLAG));
+
+#define SETIFLAG(n) \
+  /*clear bit 3 (I)*/ \
+  r6502_ps = (r6502_ps & NOTIFLAG); \
+  /*set bit 3 (I)*/ \
+  r6502_ps = (r6502_ps | (n & IFLAG));
+
+#define SETZFLAG(n) \
+  if (n == 0) \
+    /*set bit 1 (Z)*/ \
+    r6502_ps = (r6502_ps | ZFLAG); \
+  else \
+    /*clear bit 1 (Z)*/ \
+    r6502_ps = (r6502_ps & NOTZFLAG);
+
+#define ADDRESSOFABSOLUTEX(n) \
+  address = n + r6502_x;
+
+#define ADDRESSOFABSOLUTEXPLUS(n) \
+  address = n + r6502_x;
+
+#define ADDRESSOFABSOLUTEY(n) \
+  address = n + r6502_y;
+
+#define ADDRESSOFABSOLUTEYPLUS(n) \
+  address = n + r6502_y;
+
+#define ADDRESSOFPOSTINDEXEDY(n) \
+  nlo = memory[n]; \
+  value1 = ((n+1) & 0xFF); \
+  nhi = memory[(n & 0xFF00) | value1]; \
+  address = (nhi << 8) | nlo; \
+  address += r6502_y;
+
+#define ADDRESSOFPREINDEXED(n) \
+  address = ((n + r6502_x) & 0xFF); \
+  nlo = memory[address]; \
+  value1 = ((address+1) & 0xFF); \
+  nhi = memory[(address & 0xFF00) | value1]; \
+  address = (nhi << 8) | nlo;
+
+#define OSBYTE \
+  regs.r[0] = r6502_a; \
+  regs.r[1] = r6502_x; \
+  regs.r[2] = r6502_y; \
+  _kernel_swi(OS_Byte,&regs,&regs); \
+  r6502_x = regs.r[1]; \
+  r6502_y = regs.r[2];
+
+#define OSBYTE7A \
+  regs.r[0] = r6502_a; \
+  regs.r[1] = r6502_x; \
+  regs.r[2] = r6502_y; \
+  _kernel_swi(OS_Byte,&regs,&regs); \
+  r6502_x = regs.r[1]; \
+  r6502_y = 0xEE;
+
+#define OSBYTE81 \
+  regs.r[0] = r6502_a; \
+  regs.r[1] = r6502_x; \
+  regs.r[2] = r6502_y; \
+  _kernel_swi(OS_Byte,&regs,&regs); \
+  /*X is not corrupted on the BBC, like it is on RISC OS*/ \
+  if (regs.r[1] != 0xFF) \
+    r6502_x = regs.r[1]; \
+  r6502_y = regs.r[2];
+
+#define OSBYTEAC \
+  r6502_x = 0x2B; \
+  r6502_y = 0xF0;
+
+#define OSWORD \
+  osword();
+
+#define OSWRCH \
+  oswrch(r6502_a); \
+  /* regs.r[0] = r6502_a; \ */
+  /* _kernel_swi(OS_WriteC,&regs,&regs); */
+
+#define WAIT_FOR_VERTICAL_SYNC \
+  regs.r[0] = 0x13; \
+  _kernel_swi(OS_Byte,&regs,&regs); \
+
+#define ADCxx(n) \
+  r6502adc(n);
+
+#define ADC_ABSOL(n) \
+  value1 = r6502read(n); \
+  r6502adc(value1);
+
+#define ADC_ABSXP(n) \
+  ADDRESSOFABSOLUTEXPLUS(n) \
+  value1 = r6502read(address); \
+  r6502adc(value1);
+
+#define ADC_IMMED(n) \
+  r6502adc(n);
+
+#define ADC_POSTI(n) \
+  ADDRESSOFPOSTINDEXEDY(n) \
+  value1 = r6502read(address); \
+  r6502adc(value1);
+
+#define ADC_ZEROP(n) \
+  value1 = memory[n]; \
+  r6502adc(value1);
+
+#define ADC_ZEROX(n) \
+  address = ((n + r6502_x) & 0xFF); \
+  value1 = memory[address]; \
+  r6502adc(value1);
+
+#define AND_IMMED(n) \
+  r6502_a &= n; \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define AND_ZEROP(n) \
+  value1 = memory[n]; \
+  r6502_a &= value1; \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define ASL \
+  if (r6502_a & 0x80) \
+    SETFLAG(CFLAG) \
+  else \
+    CLEARFLAG(CFLAG) \
+  r6502_a = (r6502_a << 1); \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define ASL_ZEROP(n) \
+  value1 = memory[n]; \
+  if (value1 & 0x80) \
+    SETFLAG(CFLAG) \
+  else \
+    CLEARFLAG(CFLAG) \
+  value2 = (value1 << 1); \
+  memory[n] = value2; \
+  SETNFLAG(value2) \
+  SETZFLAG(value2)
+
+#define BCC(n) \
+  if (!(r6502_ps & CFLAG)) \
+    goto n;
+
+#define BCS(n) \
+  if (r6502_ps & CFLAG) \
+    goto n;
+
+#define BEQ(n) \
+  if (r6502_ps & ZFLAG) \
+    goto n;
+
+#define BMI(n) \
+  if (r6502_ps & NFLAG) \
+    goto n;
+
+#define BNE(n) \
+  if (!(r6502_ps & ZFLAG)) \
+    goto n;
+
+#define BPL(n) \
+  if (!(r6502_ps & NFLAG)) \
+    goto n;
+
+#define BIT_ZEROP(n) \
+  value1 = memory[n]; \
+  value2 = (r6502_a & value1); \
+  SETNFLAG(value1) \
+  SETVFLAG(value1) \
+  SETZFLAG(value2)
+
+#define CLC \
+  CLEARFLAG(CFLAG);
+
+#define CLD \
+  CLEARFLAG(DFLAG);
+
+#define CMP_ABSOL(n) \
+  value1 = r6502read(n); \
+  value2 = (r6502_a - value1); \
+  if (r6502_a >= value1) \
+    SETFLAG(CFLAG) \
+  else \
+    CLEARFLAG(CFLAG) \
+  SETNFLAG(value2) \
+  SETZFLAG(value2)
+
+#define CMP_ABSXP(n) \
+  ADDRESSOFABSOLUTEXPLUS(n) \
+  value1 = r6502read(address); \
+  value2 = (r6502_a - value1); \
+  if (r6502_a >= value1) \
+    SETFLAG(CFLAG) \
+  else \
+    CLEARFLAG(CFLAG) \
+  SETNFLAG(value2) \
+  SETZFLAG(value2)
+
+#define CMP_ABSYP(n) \
+  ADDRESSOFABSOLUTEYPLUS(n) \
+  value1 = r6502read(address); \
+  value2 = (r6502_a - value1); \
+  if (r6502_a >= value1) \
+    SETFLAG(CFLAG) \
+  else \
+    CLEARFLAG(CFLAG) \
+  SETNFLAG(value2) \
+  SETZFLAG(value2)
+
+#define CMP_IMMED(n) \
+  value2 = (r6502_a - n); \
+  if (r6502_a >= n) \
+    SETFLAG(CFLAG) \
+  else \
+    CLEARFLAG(CFLAG) \
+  SETNFLAG(value2) \
+  SETZFLAG(value2)
+
+#define CMP_ZEROP(n) \
+  value1 = memory[n]; \
+  value2 = (r6502_a - value1); \
+  if (r6502_a >= value1) \
+    SETFLAG(CFLAG) \
+  else \
+    CLEARFLAG(CFLAG) \
+  SETZFLAG(value2) \
+  SETNFLAG(value2)
+
+#define CPX_IMMED(n) \
+  value2 = (r6502_x - n); \
+  if (r6502_x >= n) \
+    SETFLAG(CFLAG) \
+  else \
+    CLEARFLAG(CFLAG) \
+  SETNFLAG(value2) \
+  SETZFLAG(value2)
+
+#define CPX_ZEROP(n) \
+  value1 = memory[n]; \
+  value2 = (r6502_x - value1); \
+  if (r6502_x >= value1) \
+    SETFLAG(CFLAG) \
+  else \
+    CLEARFLAG(CFLAG) \
+  SETZFLAG(value2) \
+  SETNFLAG(value2)
+
+#define CPY_IMMED(n) \
+  value2 = (r6502_y - n); \
+  if (r6502_y >= n) \
+    SETFLAG(CFLAG) \
+  else \
+    CLEARFLAG(CFLAG) \
+  SETNFLAG(value2) \
+  SETZFLAG(value2)
+
+#define CPY_ZEROP(n) \
+  value1 = memory[n]; \
+  value2 = (r6502_y - value1); \
+  if (r6502_y >= value1) \
+    SETFLAG(CFLAG) \
+  else \
+    CLEARFLAG(CFLAG) \
+  SETZFLAG(value2) \
+  SETNFLAG(value2)
+
+#define DEC_ABSOL(n) \
+  value1 = r6502read(n); \
+  value1--; \
+  r6502write(n,value1); \
+  SETNFLAG(value1) \
+  SETZFLAG(value1)
+
+#define DEC_ABSOX(n) \
+  ADDRESSOFABSOLUTEX(n) \
+  value1 = r6502read(address); \
+  value1--; \
+  r6502write(address,value1); \
+  SETZFLAG(value1) \
+  SETNFLAG(value1)
+
+#define DEC_ZEROP(n) \
+  value1 = memory[n]; \
+  value1--; \
+  memory[n] = value1; \
+  SETNFLAG(value1) \
+  SETZFLAG(value1)
+
+#define DEC_ZEROX(n) \
+  address = ((n + r6502_x) & 0xFF); \
+  value1 = memory[address]; \
+  value1--; \
+  memory[address] = value1; \
+  SETNFLAG(value1) \
+  SETZFLAG(value1)
+
+#define DEX \
+  r6502_x--; \
+  SETNFLAG(r6502_x) \
+  SETZFLAG(r6502_x)
+
+#define DEY \
+  r6502_y--; \
+  SETNFLAG(r6502_y) \
+  SETZFLAG(r6502_y)
+
+#define EOR_IMMED(n) \
+  r6502_a ^= n; \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define EOR_ZEROP(n) \
+  r6502_a ^= memory[n]; \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define INC_ABSOL(n) \
+  value1 = r6502read(n); \
+  value1++; \
+  r6502write(n,value1); \
+  SETNFLAG(value1) \
+  SETZFLAG(value1)
+
+#define INC_ABSOX(n) \
+  ADDRESSOFABSOLUTEX(n) \
+  value1 = r6502read(address); \
+  value1++; \
+  r6502write(address,value1); \
+  SETZFLAG(value1) \
+  SETNFLAG(value1)
+
+#define INC_ZEROP(n) \
+  value1 = memory[n]; \
+  value1++; \
+  memory[n] = value1; \
+  SETNFLAG(value1) \
+  SETZFLAG(value1)
+
+#define INC_ZEROX(n) \
+  address = ((n + r6502_x) & 0xFF); \
+  value1 = memory[address]; \
+  value1++; \
+  memory[address] = value1; \
+  SETNFLAG(value1) \
+  SETZFLAG(value1)
+
+#define INX \
+  r6502_x++; \
+  SETNFLAG(r6502_x) \
+  SETZFLAG(r6502_x)
+
+#define INY \
+  r6502_y++; \
+  SETNFLAG(r6502_y) \
+  SETZFLAG(r6502_y)
+
+#define JMP_ABSOL(n) \
+  goto n;
+
+#define JSR_ABSOL(n, l) \
+  r6502jsr(n); \
+  /*pushpsr(); \
+  goto l;*/
+
+#define JSR_ABSOLO(n) \
+  n();
+
+#define LDA_ABSOL(n) \
+  r6502_a = r6502read(n); \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define LDA_ABSXP(n) \
+  ADDRESSOFABSOLUTEXPLUS(n) \
+  r6502_a = r6502read(address); \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define LDA_ABSYP(n) \
+  ADDRESSOFABSOLUTEYPLUS(n) \
+  r6502_a = r6502read(address); \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define LDA_IMMED(n) \
+  r6502_a = n; \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define LDA_POSTI(n) \
+  ADDRESSOFPOSTINDEXEDY(n) \
+  r6502_a = r6502read(address); \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define LDA_PREIN(n) \
+  ADDRESSOFPREINDEXED(n) \
+  r6502_a = r6502read(address); \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define LDA_ZEROP(n) \
+  r6502_a = memory[n]; \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define LDA_ZEROX(n) \
+  address = ((n + r6502_x) & 0xFF); \
+  r6502_a = memory[address]; \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define LDX_ABSOL(n) \
+  r6502_x = r6502read(n); \
+  SETNFLAG(r6502_x) \
+  SETZFLAG(r6502_x)
+
+#define LDX_IMMED(n) \
+  r6502_x = n; \
+  SETNFLAG(r6502_x) \
+  SETZFLAG(r6502_x)
+
+#define LDX_ZEROP(n) \
+  r6502_x = memory[n]; \
+  SETNFLAG(r6502_x) \
+  SETZFLAG(r6502_x)
+
+#define LDY_ABSOL(n) \
+  r6502_y = r6502read(n); \
+  SETNFLAG(r6502_y) \
+  SETZFLAG(r6502_y)
+
+#define LDY_ABSXP(n) \
+  ADDRESSOFABSOLUTEXPLUS(n) \
+  r6502_y = r6502read(address); \
+  SETNFLAG(r6502_y) \
+  SETZFLAG(r6502_y)
+
+#define LDY_IMMED(n) \
+  r6502_y = n; \
+  SETNFLAG(r6502_y) \
+  SETZFLAG(r6502_y)
+
+#define LDY_ZEROP(n) \
+  r6502_y = memory[n]; \
+  SETNFLAG(r6502_y) \
+  SETZFLAG(r6502_y)
+
+#define LDY_ZEROX(n) \
+  address = ((n + r6502_x) & 0xFF); \
+  r6502_y = memory[address]; \
+  SETNFLAG(r6502_y) \
+  SETZFLAG(r6502_y)
+
+#define LSR \
+  if (r6502_a & 0x01) \
+    SETFLAG(CFLAG) \
+  else \
+    CLEARFLAG(CFLAG) \
+  r6502_a = (r6502_a >> 1); \
+  CLEARFLAG(NFLAG); \
+  SETZFLAG(r6502_a)
+
+#define LSR_ABSOL(n) \
+  value1 = r6502read(n); \
+  if (value1 & 0x01) \
+    SETFLAG(CFLAG) \
+  else \
+    CLEARFLAG(CFLAG) \
+  value1 = (value1 >> 1); \
+  r6502write(n,value1); \
+  CLEARFLAG(NFLAG) \
+  SETZFLAG(value1)
+
+#define LSR_ABSXP(n) \
+  ADDRESSOFABSOLUTEXPLUS(n) \
+  value1 = r6502read(address); \
+  if (value1 & 0x01) \
+    SETFLAG(CFLAG) \
+  else \
+    CLEARFLAG(CFLAG) \
+  value1 = (value1 >> 1); \
+  r6502write(address,value1); \
+  CLEARFLAG(NFLAG) \
+  SETZFLAG(value1)
+
+#define LSR_ZEROP(n) \
+  value1 = memory[n]; \
+  if (value1 & 0x01) \
+    SETFLAG(CFLAG) \
+  else \
+    CLEARFLAG(CFLAG) \
+  value1 = (value1 >> 1); \
+  memory[n] = value1; \
+  CLEARFLAG(NFLAG) \
+  SETZFLAG(value1)
+
+#define ORA_IMMED(n) \
+  r6502_a |= n; \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define ORA_ZEROP(n) \
+  r6502_a |= memory[n]; \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define PHA \
+  STACK_PUSH(r6502_a)
+
+#define PHP \
+  value1 = PROCESSORSTATUS(BFLAG) \
+  STACK_PUSH(value1)
+
+#define PLA \
+  STACK_POP(r6502_a) \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define PLP \
+  STACK_POP(r6502_ps);
+
+#define ROL \
+  value2 = (r6502_ps & CFLAG); \
+  if (r6502_a & 0x80) \
+    SETFLAG(CFLAG) \
+  else \
+    CLEARFLAG(CFLAG) \
+  r6502_a = (r6502_a << 1); \
+  if (value2) \
+    r6502_a |= 1; \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define ROL_ZEROP(n) \
+  value1 = memory[n]; \
+  value2 = (r6502_ps & CFLAG); \
+  if (value1 & 0x80) \
+    SETFLAG(CFLAG) \
+  else \
+    CLEARFLAG(CFLAG) \
+  value1 = (value1 << 1); \
+  if (value2) \
+    value1 |= 1; \
+  memory[n] = value1; \
+  SETNFLAG(value1) \
+  SETZFLAG(value1)
+
+#define RLA_ABSOL(n) \
+  value1 = (r6502_ps & CFLAG); \
+  value2 = r6502read(n); \
+  if (value2 & 0x80) \
+    SETFLAG(CFLAG) \
+  else \
+    CLEARFLAG(CFLAG) \
+  value2 = (value2 << 1); \
+  if (value1) \
+    value2 |= 1; \
+  r6502write(n,value2); \
+  r6502_a &= value2; \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define RTS \
+  STACK_POP(nlo); \
+  STACK_POP(nhi); \
+  /*poppsr();*/
+  /*return(0);*/
+  /*longjump(jmpbuffer,value1);*/
+  /*r6502rts();*/
+
+#define SBCxx(n) \
+  r6502sbc(n);
+
+#define SBC_ABSOL(n) \
+  value1 = r6502read(n); \
+  r6502sbc(value1);
+
+#define SBC_ABSXP(n) \
+  ADDRESSOFABSOLUTEXPLUS(n) \
+  value1 = r6502read(address); \
+  r6502sbc(value1);
+
+#define SBC_ABSYP(n) \
+  ADDRESSOFABSOLUTEYPLUS(n) \
+  value1 = r6502read(address); \
+  r6502sbc(value1);
+
+#define SBC_IMMED(n) \
+  r6502sbc(n);
+
+#define SBC_POSI(n) \
+  ADDRESSOFPOSTINDEXEDY(n) \
+  value1 = r6502read(address); \
+  r6502sbc(value1);
+
+#define SBC_ZEROP(n) \
+  value1 = memory[n]; \
+  r6502sbc(value1);
+
+#define SEC \
+  SETFLAG(CFLAG);
+
+#define STA_ABSOL(n) \
+  r6502write(n,r6502_a);
+
+#define STA_ABSOX(n) \
+  ADDRESSOFABSOLUTEX(n) \
+  r6502write(address,r6502_a);
+
+#define STA_ABSOY(n) \
+  ADDRESSOFABSOLUTEY(n) \
+  r6502write(address,r6502_a);
+
+#define STA_POSTI(n) \
+  ADDRESSOFPOSTINDEXEDY(n) \
+  r6502write(address,r6502_a);
+
+#define STA_ZEROP(n) \
+  memory[n] = r6502_a;
+
+#define STA_ZEROX(n) \
+  address = ((n + r6502_x) & 0xFF); \
+  memory[address] = r6502_a;
+
+#define STX_ABSOL(n) \
+   r6502write(n,r6502_x);
+
+#define STX_ZEROP(n) \
+  memory[n] = r6502_x;
+
+#define STY_ABSOL(n) \
+   r6502write(n,r6502_y);
+
+#define STY_ZEROP(n) \
+  memory[n] = r6502_y;
+
+#define TAX \
+  r6502_x = r6502_a; \
+  SETNFLAG(r6502_x) \
+  SETZFLAG(r6502_x)
+
+#define TAY \
+  r6502_y = r6502_a; \
+  SETNFLAG(r6502_y) \
+  SETZFLAG(r6502_y)
+
+#define TSX \
+  r6502_x = r6502_sp; \
+  SETNFLAG(r6502_x) \
+  SETZFLAG(r6502_x)
+
+#define TXA \
+  r6502_a = r6502_x; \
+  SETNFLAG(r6502_a) \
+  SETZFLAG(r6502_a)
+
+#define TXS \
+  r6502_sp = r6502_x;
+
+#define TYA \
+  r6502_a = r6502_y; \
+  SETZFLAG(r6502_a) \
+  SETNFLAG(r6502_a)

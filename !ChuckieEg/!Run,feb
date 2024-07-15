@@ -1,0 +1,9 @@
+|>!Run
+| Run file for !ChuckieEg
+|
+Set ChuckieEgg$Dir <Obey$Dir>
+RMEnsure SharedCLibrary 5.43 RMLoad System:Modules.CLib
+RMEnsure SharedCLibrary 5.43 Error You need SharedCLibrary 5.43 or later to run Chuckie Egg
+RMEnsure BeebSound 1.00 RMLoad <ChuckieEgg$Dir>.BeebSound
+WimpSlot -min 228K -max 228K
+Run <ChuckieEgg$Dir>.!RunImage %*0

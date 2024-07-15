@@ -1,0 +1,32 @@
+;>r6502code
+;
+
+; Use the GET directive to include register definitions as if typed here
+
+  GET h.RegNames
+
+; Use the GET directive to include a list of SWI names as if typed here
+
+  GET h.SWINames
+
+; Area name C$$code advisable as wanted to link with C output
+
+  AREA |C$$code|, CODE, READONLY
+
+; Import global symbols
+
+; Export global symbols
+
+  EXPORT |bbcvdu|
+
+|bbcvdu|
+  ;STMFD sp!,{lr}
+  SWI OS_WriteC
+  MOV pc,lr
+  ;LDMFD sp!,{pc}
+
+;Data Area
+
+;  AREA    |C$$data|, DATA
+
+  END

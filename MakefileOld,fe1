@@ -1,0 +1,56 @@
+# Project:   ChuckieEgg
+
+
+# Toolflags:
+CCflags = -c -depend !Depend -throwback -IC: -apcs 3/32bit
+Linkflags = -aif -o $@ 
+ObjAsmflags = -depend !Depend -ThrowBack -Stamp -quit -CloseExec -apcs 3/32bit
+CMHGflags = 
+LibFileflags = -c -o $@
+Squeezeflags = -o $@
+AAsmflags = -depend !Depend -quit -CloseExec -To $@ -From
+
+
+# Final targets:
+@.!RunImage:   @.o.main @.o.execute @.o.library @.o.r6502main @.o.r6502code \
+        C:o.Stubs 
+        link $(linkflags) @.o.main @.o.execute @.o.library @.o.r6502main \
+        @.o.r6502code C:o.Stubs 
+
+
+# User-editable dependencies:
+
+# Static dependencies:
+@.o.r6502code:   @.s.r6502code
+        objasm $(objasmflags) -o @.o.r6502code @.s.r6502code
+@.o.r6502main:   @.c.r6502main
+        cc $(ccflags) -o @.o.r6502main @.c.r6502main
+@.o.main:   @.c.main
+        cc $(ccflags) -o @.o.main @.c.main
+@.o.execute:   @.c.execute
+        cc $(ccflags) -o @.o.execute @.c.execute
+@.o.library:   @.c.library
+        cc $(ccflags) -o @.o.library @.c.library
+
+# Dynamic dependencies:
+o.execute:	c.execute
+o.execute:	h.r6502lib
+o.execute:	C:h.kernel
+o.execute:	C:h.swis
+o.library:	c.library
+o.library:	h.r6502lib
+o.library:	C:h.kernel
+o.library:	C:h.swis
+o.r6502main:	c.r6502main
+o.r6502main:	C:h.kernel
+o.r6502main:	C:h.swis
+o.r6502main:	h.r6502lib
+o.r6502main:	C:h.kernel
+o.r6502main:	C:h.swis
+o.r6502code: s.r6502code
+o.r6502code: h.RegNames
+o.r6502code: h.SWInames
+o.main:	c.main
+o.main:	h.r6502lib
+o.main:	C:h.kernel
+o.main:	C:h.swis

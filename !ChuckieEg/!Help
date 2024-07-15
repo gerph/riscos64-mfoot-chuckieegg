@@ -1,0 +1,71 @@
+CHUCKIE EGG
+===========
+
+BBC version by Doug Anderson.
+Copyright A & F Software.
+
+RISC OS conversion by Michael Foot.
+RISC OS version 1.03 (09 Feb 2003).
+
+INTRODUCTION
+------------
+
+Up    - a
+Down  - z
+Left  - ,
+Right - .
+Jump  - Space
+Hold  - H
+Abort - Escape + H
+Quit  - Escape (only from menu screen)
+
+CONFIGURATION
+-------------
+
+Inside the game application directory is a configuration file named !Config. Loading this into a text editor will allow you to change the game options.
+Initially, the options are set to:
+
+Lives=5
+Level=0
+
+Changing the value after the equals sign (=) will allow you to change the number of lives and the initial level you start with.
+
+COMPATIBILITY
+-------------
+
+This game will run on all RISC OS computers from ARM250, RISC OS 3.xx to StrongARM, RISC OS 4.xx.
+
+KNOWN ISSUES
+------------
+
+None.
+
+CREDITS
+-------
+
+BBC version by Doug Anderson and distributed by A & F Software.
+RISC OS conversion by Michael Foot.
+RISC OS screen address calculations by Thomas Harte.
+
+HISTORY
+-------
+Version 1.03 (09 Feb 2003)
+
+- Made 26/32 bit compatible.
+
+Version 1.02 (23 Feb 2002)
+
+- Added !Config file to allow setting of initial lives and start level.
+
+Version 1.01 (12 Jan 2002)
+
+- Added saving and loading of the high score table and the key layouts.
+
+Version 1.00 (18 Apr 2001)
+
+- Initial version.
+
+LATER VERSIONS
+--------------
+
+The latest version can be obtained from my home page at <http://homepages.paradise.net.nz/mjfoot/>.
