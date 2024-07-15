@@ -1,0 +1,60 @@
+/*******************************************************************
+ * File:     i_sprite
+ * Purpose:  Sprite handling for the screen.
+ * Author:   Charles Ferguson
+ ******************************************************************/
+
+#ifndef I_SPRITE_H
+#define I_SPRITE_H
+
+#include "i_screeninfo.h"
+
+typedef struct sprite_s sprite_t;
+
+typedef struct spritearea_s spritearea_t;
+
+typedef struct spritescreen_s spritescreen_t;
+
+
+/*************************************************** Gerph *********
+ Function:      spritescreen_create
+ Description:   Create a sprite to use as the screen
+ Parameters:    w = width
+                h = height
+                mode = mode
+                l2bpp = log2 bits per pixels (2 => 16 cols, 3=> 256 cols, 4=> 16bit, 5=> 32bit)
+                palsize = palette size
+                need_colourtrans = whether we should colourtrans when plotting
+ Returns:       pointer to the structure describing the data
+ ******************************************************************/
+spritescreen_t *spritescreen_create(int w, int h, unsigned long mode,
+                                    int l2bpp, int palsize,
+                                    int need_colourtrans);
+
+void spritescreen_origin(spritescreen_t *ss, int x, int y);
+void spritescreen_scaleto(spritescreen_t *ss, int w, int h);
+void spritescreen_destroy(spritescreen_t *ss);
+void spritescreen_palette(spritescreen_t *ss, int colour, unsigned long pal);
+void spritescreen_blit(spritescreen_t *ss);
+
+byte *spritescreen_get_data(spritescreen_t *ss);
+byte *spritescreen_get_colourtrans(spritescreen_t *ss);
+
+/*************************************************** Gerph *********
+ Function:      spritescreen_centre
+ Description:   Centre the screen in the current output
+ Parameters:    ss-> the sprite to display
+ Returns:       1 for success, 0 for failure
+ ******************************************************************/
+int spritescreen_centre(spritescreen_t *ss);
+
+/*************************************************** Gerph *********
+ Function:      spritescreen_save
+ Description:   Save the sprite to a file
+ Parameters:    ss-> the sprite to save
+                filename-> the filename to save to
+ Returns:       1 for success, 0 for failure
+ ******************************************************************/
+int spritescreen_save(spritescreen_t *ss, char *filename);
+
+#endif

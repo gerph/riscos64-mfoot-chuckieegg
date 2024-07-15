@@ -1,0 +1,7 @@
+#include <stdio.h>
+
+void I_Error(char *s)
+{
+    printf("Failed: %s\n", s);
+    exit(1);
+}

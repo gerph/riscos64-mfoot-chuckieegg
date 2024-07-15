@@ -1,0 +1,24 @@
+
+#include <stdio.h>
+
+/* Some memory */
+static char memory[1024 * 180];
+static char *freep = memory;
+static int left = sizeof(memory);
+
+void *spritescreen_malloc(int size)
+{
+    void *mem = (void*)freep;
+    freep += size;
+    left -= size;
+    if (left < 0)
+    {
+        printf("OUT OF MEMORY - need %i bytes\n", size);
+        exit(1);
+    }
+    return mem;
+}
+void spritescreen_free(void *block)
+{
+    /* Nothing to do */
+}

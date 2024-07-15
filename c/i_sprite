@@ -1,0 +1,356 @@
+/*******************************************************************
+ * File:     i_sprite
+ * Purpose:  Sprite handling for the screen.
+ * Author:   Justin Fletcher
+ ******************************************************************/
+
+#include <stdlib.h>
+#include <stdio.h>
+#include "swis.h"
+#include "i_sprite.h"
+#include "i_screeninfo.h"
+
+/* Define this to debug this file */
+#define DEBUG
+
+#ifndef BETA
+#undef DEBUG
+#endif
+
+/* If we were to overrun out sprite buffer, we could set this to the number
+ * of extra rows we were overrunning by.
+ */
+#define SLOP_ROWS (0)
+
+#ifdef DEBUG
+#define dprintf if (1) _swix(0x104,0), printf("%i: ", clock()), printf
+#else
+#define dprintf if (0) printf
+#endif
+
+struct sprite_s {
+    int     next_offset;
+    char    name[12];
+    int     width_minus_1;
+    int     height_minus_1;
+    int     first_bit;
+    int     last_bit;
+    int     sprite_offset;
+    int     mask_offset;
+    unsigned long mode;
+};
+
+struct spritearea_s {
+    int     area_size;
+    int     nsprites;
+    int     first;
+    int     free;
+};
+
+struct spritescreen_s {
+    spritearea_t *area;
+    sprite_t *sprite;
+    unsigned long *palette;
+    byte *data;
+    int x, y;
+    int width;
+    int height;
+    int spritesize;
+    byte *colourtrans;
+    int colourtrans_update;
+    int use_scale;
+    struct scale_s {
+        int xmult;
+        int ymult;
+        int xdiv;
+        int ydiv;
+    } scale;
+};
+
+
+extern void *spritescreen_malloc(int size);
+extern void spritescreen_free(void *block);
+
+/*************************************************** Gerph *********
+ Function:      spritescreen_create
+ Description:   Create a sprite to use as the screen
+ Parameters:    w = width
+                h = height
+                mode = mode
+                l2bpp = log2 bits per pixels (2 => 16 cols, 3=> 256 cols, 4=> 16bit, 5=> 32bit)
+                palsize = palette size
+                need_colourtrans = whether we should colourtrans when plotting:
+ Returns:       pointer to the structure describing the data
+ ******************************************************************/
+spritescreen_t *spritescreen_create(int w, int h, unsigned long mode,
+                                    int l2bpp, int palsize,
+                                    int need_colourtrans)
+{
+    _kernel_oserror *err;
+    spritescreen_t *ss;
+    int total_size;
+    int sprite_size = 0;
+    int width_words;
+    int ss_size = sizeof(*ss);
+
+    if (l2bpp > 3)
+    {
+        need_colourtrans = 1;
+        ss_size += 4 * 4; /* This is an assumption of the size */
+    }
+    else
+    {
+        if (need_colourtrans)
+        {
+            /* Allow for the size of our colourtrans table (in any mode) */
+            ss_size += 4 * (1<<(1<<l2bpp));
+        }
+    }
+
+    ss = spritescreen_malloc(ss_size);
+    if (ss == NULL)
+    {
+        I_Error("Cannot claim sprite screen memory (1)");
+    }
+    if (need_colourtrans)
+    {
+        ss->colourtrans = ((byte*)ss) + sizeof(*ss);
+        ss->colourtrans_update = 1;
+    }
+    else
+    {
+        ss->colourtrans = NULL;
+    }
+
+    total_size = sizeof(spritearea_t);
+    total_size += sizeof(sprite_t);
+    total_size += palsize;
+    if (l2bpp == 2)
+        width_words = (w + 7) / 8;
+    else if (l2bpp == 3)
+        width_words = (w + 3) / 4;
+    else if (l2bpp == 4)
+        width_words = (w + 1) / 4;
+    else if (l2bpp == 5)
+        width_words = w;
+    else
+        I_Error("Unsupported sprite screen l2bpp");
+    sprite_size = width_words * 4 * (h + SLOP_ROWS);
+    total_size += sprite_size;
+
+    dprintf("spritescreen_create: Creating sprite area of size %i for %i x %i with log2bpp = %i\n", total_size, w, h, l2bpp);
+
+    ss->area = spritescreen_malloc(total_size);
+    if (ss->area == NULL)
+        I_Error("Cannot claim sprite screen memory of %i bytes (2)", total_size);
+    ss->area->area_size = total_size;
+    ss->area->nsprites = 1;
+    ss->area->first = 16;
+    ss->area->free = total_size;
+
+    ss->sprite = (sprite_t*) (((byte*)ss->area) + sizeof(spritearea_t));
+    ss->sprite->next_offset = total_size - sizeof(spritearea_t);
+    memset(ss->sprite->name, 0, sizeof(ss->sprite->name));
+    strcpy(ss->sprite->name, "screen");
+    ss->sprite->first_bit = 0;
+    ss->sprite->width_minus_1 = width_words - 1;
+    if (l2bpp == 2)
+    {
+        ss->sprite->last_bit = ((w & 7) * 4 - 1) & 31;
+    }
+    else if (l2bpp == 3)
+    {
+        ss->sprite->last_bit = ((w & 3) * 8 - 1) & 31;
+    }
+    else if (l2bpp == 4)
+    {
+        ss->sprite->last_bit = ((w & 1) * 16 - 1) & 31;
+    }
+    else if (l2bpp == 5)
+    {
+        ss->sprite->last_bit = 31;
+    }
+    ss->sprite->height_minus_1 = h - 1;
+    ss->sprite->sprite_offset = sizeof(sprite_t) + palsize;
+    ss->sprite->mask_offset = ss->sprite->sprite_offset;
+    if (mode < 256 || (mode & 1))
+    {
+        ss->sprite->mode = mode;
+    }
+    else
+    {
+        unsigned long *modesel = (unsigned long *)mode;
+        if (modesel[0] != 1)
+            I_Error("Cannot create sprite screen (mode selector is not type 1)");
+        /* Actually we don't really need any information from the mode selector */
+        ss->sprite->mode = (1<<0) | (90<<1) | (90<<14) | ((l2bpp + 1) << 27);
+    }
+    ss->data = ((byte*)ss->sprite) + ss->sprite->sprite_offset;
+    if (palsize)
+        ss->palette = (unsigned long *)(((byte*)ss->sprite) + sizeof(sprite_t));
+    else
+        ss->palette = NULL;
+    ss->spritesize = sprite_size;
+
+    ss->width = w;
+    ss->height = h;
+    ss->x = 0;
+    ss->y = 0;
+    ss->use_scale = 0;
+    ss->scale.xmult = 1;
+    ss->scale.ymult = 1;
+    ss->scale.xdiv = 1;
+    ss->scale.ydiv = 1;
+
+    /* Do a validate on the area, just to be sure that we built ti right */
+    err = _swix(OS_SpriteOp, _INR(0, 1), 0x111, ss->area);
+    if (err)
+        I_Error("Sprite area validation failed: %s", err->errmess);
+
+    return ss;
+}
+
+void spritescreen_origin(spritescreen_t *ss, int x, int y)
+{
+    ss->x = x;
+    ss->y = y;
+}
+
+void spritescreen_scaleto(spritescreen_t *ss, int w, int h)
+{
+    ss->scale.xmult = w;
+    ss->scale.ymult = h;
+    ss->scale.xdiv = ss->width;
+    ss->scale.ydiv = ss->height;
+    ss->use_scale = (w != ss->width || h != ss->height);
+}
+
+
+void spritescreen_destroy(spritescreen_t *ss)
+{
+    if (ss)
+    {
+        spritescreen_free(ss->area);
+        ss->area = NULL;
+        spritescreen_free(ss);
+    }
+}
+
+void spritescreen_palette(spritescreen_t *ss, int colour, unsigned long pal)
+{
+    if (!ss->palette)
+        return;
+    ss->palette[colour * 2] = pal;
+    ss->palette[colour * 2 + 1] = pal;
+    ss->colourtrans_update = 1;
+}
+
+void spritescreen_blit(spritescreen_t *ss)
+{
+    if (ss)
+    {
+        _kernel_oserror *err;
+        byte *pixtrans = NULL;
+        void *scale = NULL;
+        if (ss->colourtrans)
+        {
+            pixtrans = ss->colourtrans;
+            if (ss->colourtrans_update)
+            {
+                _swix(ColourTrans_GenerateTable,
+                      _INR(0, 7),
+                      256, ss->sprite, /* Source is a sprite */
+                      -1, -1, /* Dest is the screen */
+                      pixtrans,
+                      ((1<<0) | /* pointer to sprite */
+                       (1<<4)), /* Use wide tables */
+                      NULL, NULL);
+            }
+        }
+        if (ss->use_scale)
+            scale = &ss->scale;
+        err = _swix(OS_SpriteOp, _INR(0, 7),
+                                 512 + 52, ss->area, ss->sprite,
+                                 ss->x, ss->y,
+                                 (1<<5), /* Use wide palette entries */
+                                 scale, pixtrans);
+        if (err)
+            I_Error("Cannot blit sprite screen: %s\n", err->errmess);
+    }
+}
+
+byte *spritescreen_get_data(spritescreen_t *ss)
+{
+    return ss->data;
+}
+
+byte *spritescreen_get_colourtrans(spritescreen_t *ss)
+{
+    return ss->colourtrans;
+}
+
+/*************************************************** Gerph *********
+ Function:      spritescreen_centre
+ Description:   Centre the screen in the current output
+ Parameters:    ss-> the sprite to display
+ Returns:       1 for success, 0 for failure
+ ******************************************************************/
+int spritescreen_centre(spritescreen_t *ss)
+{
+    int render_width;
+    int render_height;
+    int xoffset = 0;
+    int yoffset = 0;
+    screensize_t size;
+    if (!screen_getsize(&size))
+        return 0;
+
+    dprintf("spritescreen_centre: sprite is %ix%i\n", ss->width, ss->height);
+    dprintf("                     screen is %ix%i\n", size.width, size.height);
+
+    render_width = (ss->width * size.height) / ss->height;
+    if (render_width > size.width)
+    {
+        dprintf("                     would be too wide (%ix%i) for screen; keeping width\n", render_width, size.height);
+        /* Wrong way around - the sprite would be larger than the screen */
+        render_height = (ss->height * size.width) / ss->width;
+        render_width = size.width;
+        yoffset = (size.height - render_height) / 2;
+    }
+    else
+    {
+        dprintf("                     keeping screen height\n");
+        render_height = size.height;
+        xoffset = (size.width - render_width) / 2;
+    }
+    xoffset <<= size.xeig;
+    yoffset <<= size.yeig;
+
+    dprintf("                     scale to  %ix%i\n", render_width, render_height);
+    dprintf("                     offset of %ix%i\n", xoffset, yoffset);
+    spritescreen_scaleto(ss, render_width, render_height);
+    spritescreen_origin(ss, xoffset, yoffset);
+    return 1;
+}
+
+/*************************************************** Gerph *********
+ Function:      spritescreen_save
+ Description:   Save the sprite to a file
+ Parameters:    ss-> the sprite to save
+                filename-> the filename to save to
+ Returns:       1 for success, 0 for failure
+ ******************************************************************/
+int spritescreen_save(spritescreen_t *ss, char *filename)
+{
+    _kernel_oserror *err;
+    err = _swix(OS_SpriteOp, _INR(0, 2),
+                             256 + 12,
+                             ss->area,
+                             filename);
+    if (err)
+    {
+        dprintf("Failed to save sprite file: %s\n", err->errmess);
+        return 0;
+    }
+    return 1;
+}

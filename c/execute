@@ -2,8 +2,8 @@
  *
  * Chuckie Egg
  * BBC version by Doug Anderson. Copyright A & F Software.
- * RISC OS Conversion by Michel Foot.
- * Version 1.03 (09 Feb 2003).
+ * RISC OS Conversion by Michael Foot.
+ * Version 1.05 (29 Jul 2023).
  *
  */
 #include <stdio.h>
@@ -65,7 +65,6 @@ extern FILE * hfile;
 
 void execute(void)
 {
-  int duration;
 /*goto m29AB;
 
 m29AB:*/
@@ -219,8 +218,10 @@ m29D8:
   BMI(m29AE)
 
   /*WAIT_FOR_VERTICAL_SYNC*/
+  blitscreen();
   while (clock() < video_timer)
   {
+    _swix(OS_Byte, _IN(0), 19);
   }
   video_timer = clock() + TIME_50HZ;
 
@@ -247,10 +248,10 @@ m2A1E:
   LDA_IMMED(0x07)
   OSWORD
   /*make the notes play longer*/
-  duration = ((memory[0x0CB7] << 8) | memory[0x0CB6]) << 1;
-  timer = clock() + (duration << 1);
+  timer = clock() + 4;
   while (clock() < timer)
   {
+    _swix(OS_Byte, _IN(0), 19);
   }
 m2A27:
   LDA_ZEROP(0x3D)

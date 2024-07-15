@@ -3,7 +3,7 @@
  * Chuckie Egg
  * BBC version by Doug Anderson. Copyright A & F Software.
  * RISC OS Conversion by Michael Foot.
- * Version 1.03 (09 Feb 2003).
+ * Version 1.05 (29 Jul 2023).
  *
  */
 
@@ -11,7 +11,7 @@
 #include <string.h>
 #include "r6502lib.h"
 
-extern void initialise(void);
+extern int initialise(void);
 extern void execute(void);
 extern void finalise(void);
 
@@ -1737,9 +1737,9 @@ int main(void)
   memory[0x2FFE] = 0x43;
   memory[0x2FFF] = 0x48;
 
-  initialise();
   initial_lives = 5;
   initial_level = 0;
+
   /*load defaults from !Config file*/
   hfile = fopen("<ChuckieEgg$Dir>.!Config","rb");
   if (hfile != NULL)
@@ -1772,7 +1772,18 @@ int main(void)
     }
     fclose(hfile);
   }
+
+  /*Turn off cursor editing*/
+  _swix(OS_Byte, _INR(0,1), 4, 1);
+
+  if (!initialise())
+  {
+     fprintf(stderr, "Failed to initialise game\n");
+     return -1;
+  }
+
   execute();
+
   #ifndef __ORIGINAL__
     hfile = fopen("<ChuckieEgg$Dir>.Keys","wb");
     if (hfile != NULL)
@@ -1788,4 +1799,5 @@ int main(void)
     }
   #endif
   finalise();
+  return 0;
 }

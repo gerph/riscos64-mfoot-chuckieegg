@@ -3,7 +3,7 @@
  * Chuckie Egg
  * BBC version by Doug Anderson. Copyright A & F Software.
  * RISC OS Conversion by Michael Foot.
- * Version 1.03 (09 Feb 2003).
+ * Version 1.05 (29 Jul 2023).
  *
  */
 
@@ -313,6 +313,7 @@ m1A48:
   timer = clock() + 40;
   while (clock() < timer)
   {
+    _swix(OS_Byte, _IN(0), 19); /* Wait for VSync */
   }
 
   /*RTS*/
@@ -2958,6 +2959,7 @@ m2C56:
   timer = clock() + 20;
   while (clock() < timer)
   {
+    _swix(OS_Byte, _IN(0), 19); /* Wait for VSync */
   }
   DEC_ZEROP(0x8A)
   BNE(m2C56)
@@ -2988,8 +2990,10 @@ void m2C6B(void)
   m2CDB();
   /*JSR_ABSOL(0x2838,m2838)*/
   m2838();
+//  _swix(0x104, 0); printf("2838\n");
   /*JSR_ABSOL(0x2D3A,m2D3A)*/
   m2D3A();
+//  _swix(0x104, 0); printf("2d3a\n");
   LDA_IMMED(0x1E)
   STA_ZEROP(0x8A)
 m2C7D:
@@ -3001,6 +3005,8 @@ m2C7D:
   BNE(m2C7D)
   /*JSR_ABSOL(0x2CBC,m2CBC)*/
   m2CBC();
+  blitscreen();
+  _swix(0x104, 0); printf("2cbc\n");
   LDA_IMMED(0x14)
   STA_ZEROP(0x8A)
 m2C8B:
@@ -3014,8 +3020,10 @@ m2C8B:
   OSWRCH
   /*JSR_ABSOL(0x2CDB,m2CDB)*/
   m2CDB();
+  //_swix(0x104, 0); printf("2cdb\n");
   /*JSR_ABSOL(0x3000,m3000)*/
   m3000();
+  //_swix(0x104, 0); printf("3000\n");
   /*JSR_ABSOL(0x2D3A,m2D3A)*/
   m2D3A();
   LDA_IMMED(0x1E)
@@ -3029,6 +3037,7 @@ m2CA4:
   BNE(m2CA4)
   /*JSR_ABSOL(0x2CBC,m2CBC)*/
   m2CBC();
+  blitscreen();
   LDA_IMMED(0x14)
   STA_ZEROP(0x8A)
 m2CB2:
@@ -3249,6 +3258,7 @@ void m2DA6(void)
     /*slow down*/
     while (clock() < timer)
     {
+      _swix(OS_Byte, _IN(0), 19); /* Wait for VSync */
     }
   }
   /*RTS*/
@@ -3516,6 +3526,7 @@ m2F88:
   timer = clock() + (duration << 1);
   while (clock() < timer)
   {
+    _swix(OS_Byte, _IN(0), 19); /* Wait for VSync */
   }
 
   DEC_ZEROP(0x8A)
@@ -3587,6 +3598,7 @@ void m3003(void)
   timer = clock() + 20;
   while (clock() < timer)
   {
+    _swix(OS_Byte, _IN(0), 19); /* Wait for VSync */
   }
   LDX_IMMED(0xB2)
   LDY_IMMED(0x0A)

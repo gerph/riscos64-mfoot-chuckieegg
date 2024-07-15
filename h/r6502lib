@@ -20,6 +20,7 @@
 
 extern void bbcvdu(char);
 extern void getscreenaddress(void);
+extern void blitscreen(void);
 #ifdef MODE_256
 extern void setmode256(void);
 #endif
