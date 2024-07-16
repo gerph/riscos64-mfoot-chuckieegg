@@ -120,8 +120,15 @@ jobs:
               echo "No archive was built?"
               exit 1
           fi
+
+          # We cannot have files that end in ,ff8 (or have any commas) for the release.
+          # So we will need to archive the files.
+          pip install rozipinfo
+          zipname="ChuckieEgg64-$version.zip"
+          python -m rozipfile -c "$zipname" "$leafname"
+
           echo "version=$version" >> $GITHUB_OUTPUT
-          echo "leafname=$leafname" >> $GITHUB_OUTPUT
+          echo "leafname=$zipname" >> $GITHUB_OUTPUT
 
       - uses: actions/upload-artifact@v4
         with:
