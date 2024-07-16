@@ -7,11 +7,12 @@
 #include <time.h>
 #include <stdio.h>
 #include "swis.h"
+#include "kernel.h"
 
 #include "i_screeninfo.h"
 
 /* Define this to debug this file */
-#define DEBUG
+//#define DEBUG
 
 #ifndef BETA
 #undef DEBUG
@@ -23,8 +24,11 @@
 #define dprintf if (0) printf
 #endif
 
+#ifdef __riscos
 void __swi(OS_WriteN + 0x20000) os_writen(char *p, int l);
-
+#else
+#define os_writen(p, l) _swix(OS_WriteN, _INR(0, 1), p, l)
+#endif
 
 #define ModeVariable_ModeFlags      (0)
 #define ModeVariable_ScrRCol        (1)
@@ -94,7 +98,7 @@ int screen_getsize(screensize_t *size)
   return 1;
 }
 
-
+/*
 int screen_getmodevariable(int var)
 {
   _kernel_swi_regs regs;
@@ -109,7 +113,7 @@ int screen_getmodevariable(int var)
     return -1;
   return regs.r[2];
 }
-
+*/
 
 byte *screen_getbase(void)
 {

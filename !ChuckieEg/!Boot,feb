@@ -1,0 +1,5 @@
+|>!Boot
+| Boot file for !ChuckieEg
+|
+Set ChuckieEgg$Dir <Obey$Dir>
+IconSprites <ChuckieEgg$Dir>.!Sprites

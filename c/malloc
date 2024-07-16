@@ -13,7 +13,9 @@ void *spritescreen_malloc(int size)
     left -= size;
     if (left < 0)
     {
+#ifdef __riscos
         printf("OUT OF MEMORY - need %i bytes\n", size);
+#endif
         exit(1);
     }
     return mem;

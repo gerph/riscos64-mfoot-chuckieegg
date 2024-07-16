@@ -23,7 +23,7 @@
 
 
 int screen_width = 640;
-int screen_height = 480;
+int screen_height = 512;
 spritescreen_t *screen;
 
 
@@ -572,7 +572,7 @@ char readmode2(int address)
 }
 
 
-char r6502read(int address)
+uint8_t r6502read(int address)
 {
   char result;
 
@@ -662,7 +662,7 @@ char r6502read(int address)
   cscreen[1] = ((pixel2 << 4) | pixel2);*/
 /*}*/
 
-void writemode2(int address, char value)
+void writemode2(int address, uint8_t value)
 {
   /*screen address calulation routine by Thomas Harte <t.harte@excite.com>*/
   /*this is fast*/
@@ -718,7 +718,7 @@ void writemode2(int address, char value)
   pixel1 = pixel1;
   pixel2 = pixel2;
   {
-    unsigned long *wscreen = (unsigned long *)address;
+    uint32_t *wscreen = (uint32_t *)address;
     wscreen[0]                   = pixel1 | (pixel1<<8) | (pixel1<<16) | (pixel1<<24);
     wscreen[1]                   = pixel2 | (pixel2<<8) | (pixel2<<16) | (pixel2<<24);
   }
@@ -746,7 +746,7 @@ void writemode7(int address, char value)
   bbcvdu(value | 0x80);
 }
 
-void r6502write(int address, char value)
+void r6502write(int address, uint8_t value)
 {
   if (address | 0x10000)
     address &= 0xFFFF;
@@ -996,7 +996,7 @@ void finalise(void)
   bbcvdu(0x0C);
 }
 
-static const unsigned long standard_palette[16] = {
+static const uint32_t standard_palette[16] = {
         0x00000000,
         0x0000FF10,
         0x00FF0010,
@@ -1018,7 +1018,7 @@ static const unsigned long standard_palette[16] = {
 #ifdef MODE_256
 void setmode_256(void)
 {
-  unsigned long mode_selector[] = {
+  uint32_t mode_selector[] = {
     1,         /* Selector flags */
     0,         /* X Resolution */
     0,         /* Y Resolution */
@@ -1034,14 +1034,14 @@ void setmode_256(void)
   mode_selector[1] = screen_width;
   mode_selector[2] = screen_height;
 
-  screen = spritescreen_create(640, 256, 28, 3, 256, 1);
+  screen = spritescreen_create(640, 256, 28, 3, 256*4*2, 1);
   spritescreen_scaleto(screen, screen_width, screen_height);
 
   regs.r[0] = 0; /* Select mode */
   regs.r[1] = (int)mode_selector; /* Pointer to our selector */
   _kernel_swi(OS_ScreenMode, &regs, &regs);
 
-  for (col=0; col<16; col++)
+  for (col=0; col<256; col++)
   {
     unsigned long pal = (col < 16) ? col : 7;
     _kernel_swi(OS_WriteI+19, NULL, NULL);

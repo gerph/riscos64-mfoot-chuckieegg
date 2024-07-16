@@ -1,7 +1,14 @@
 #include <stdio.h>
+#include "swis.h"
 
 void I_Error(char *s)
 {
+#ifdef __riscos
     printf("Failed: %s\n", s);
+#else
+    os_write0("Failed: ");
+    os_write0(s);
+    os_newline();
+#endif
     exit(1);
 }

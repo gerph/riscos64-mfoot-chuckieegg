@@ -70,6 +70,7 @@ void execute(void)
 m29AB:*/
   /*JSR_ABSOL(0x29AB,m2ACD)*/
   m2ACD();
+#ifdef __riscos
   #ifndef __ORIGINAL__
     hfile = fopen("<ChuckieEgg$Dir>.Scores","rb");
     if (hfile != NULL)
@@ -78,6 +79,7 @@ m29AB:*/
       fclose(hfile);
     }
   #endif
+#endif
 
 m29AE:
   /*JSR_ABSOL(0x29AE,m2C65)*/
@@ -221,7 +223,7 @@ m29D8:
   blitscreen();
   while (clock() < video_timer)
   {
-    _swix(OS_Byte, _IN(0), 19);
+    //_swix(OS_Byte, _IN(0), 19);
   }
   video_timer = clock() + TIME_50HZ;
 

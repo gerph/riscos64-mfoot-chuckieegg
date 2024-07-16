@@ -19,6 +19,10 @@ FILE * hfile;
 int initial_lives;
 int initial_level;
 
+#ifndef __riscos
+#define main start
+#endif
+
 int main(void)
 {
   int i;
@@ -1740,6 +1744,7 @@ int main(void)
   initial_lives = 5;
   initial_level = 0;
 
+#ifdef __riscos
   /*load defaults from !Config file*/
   hfile = fopen("<ChuckieEgg$Dir>.!Config","rb");
   if (hfile != NULL)
@@ -1772,18 +1777,30 @@ int main(void)
     }
     fclose(hfile);
   }
+#endif
 
   /*Turn off cursor editing*/
-  _swix(OS_Byte, _INR(0,1), 4, 1);
+  {
+    _kernel_swi_regs regs;
+    regs.r[0] = 4;
+    regs.r[1] = 1;
+    _kernel_swi(OS_Byte, &regs, &regs);
+  }
 
   if (!initialise())
   {
+#ifdef __riscos
      fprintf(stderr, "Failed to initialise game\n");
+#else
+     os_write0("Failed to initialise game");
+     os_newline();
+#endif
      return -1;
   }
 
   execute();
 
+#ifdef __riscos
   #ifndef __ORIGINAL__
     hfile = fopen("<ChuckieEgg$Dir>.Keys","wb");
     if (hfile != NULL)
@@ -1798,6 +1815,7 @@ int main(void)
       fclose(hfile);
     }
   #endif
+#endif
   finalise();
   return 0;
 }

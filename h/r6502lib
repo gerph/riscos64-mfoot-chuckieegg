@@ -11,6 +11,7 @@
 /*#define __JMP_BUF_SIZE 100*/
 
 /*#include <setjmp.h>*/
+#include <stdint.h>
 #include <stdio.h>
 #include <time.h>
 #include "kernel.h"
@@ -28,9 +29,9 @@ extern void osword(void);
 extern void oswrch(char c);
 extern void r6502adc(int);
 extern void r6502jsr(int);
-extern char r6502read(int);
+extern uint8_t r6502read(int);
 extern void r6502sbc(int);
-extern void r6502write(int,char);
+extern void r6502write(int,uint8_t);
 
 extern _kernel_swi_regs regs;
 extern clock_t timer, video_timer;

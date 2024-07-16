@@ -2821,6 +2821,7 @@ m2AD8:
   STA_ZEROP(0x62)
   LDA_IMMED(0x98)
   STA_ZEROP(0x61)
+#ifdef __riscos
   #ifndef __ORIGINAL__
     hfile = fopen("<ChuckieEgg$Dir>.Keys","rb");
     if (hfile != NULL)
@@ -2829,6 +2830,7 @@ m2AD8:
       fclose(hfile);
     }
   #endif
+#endif
   /*JSR_ABSOL(0x2796,m2796)*/
   m2796();
   /* Envelopes */
@@ -2988,6 +2990,7 @@ void m2C6B(void)
   OSWRCH
   /*JSR_ABSOL(0x2CDB,m2CDB)*/
   m2CDB();
+  blitscreen();
   /*JSR_ABSOL(0x2838,m2838)*/
   m2838();
 //  _swix(0x104, 0); printf("2838\n");
@@ -3006,7 +3009,7 @@ m2C7D:
   /*JSR_ABSOL(0x2CBC,m2CBC)*/
   m2CBC();
   blitscreen();
-  _swix(0x104, 0); printf("2cbc\n");
+  //_swix(0x104, 0); printf("2cbc\n");
   LDA_IMMED(0x14)
   STA_ZEROP(0x8A)
 m2C8B:
@@ -3020,6 +3023,7 @@ m2C8B:
   OSWRCH
   /*JSR_ABSOL(0x2CDB,m2CDB)*/
   m2CDB();
+  blitscreen();
   //_swix(0x104, 0); printf("2cdb\n");
   /*JSR_ABSOL(0x3000,m3000)*/
   m3000();

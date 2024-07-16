@@ -4,14 +4,16 @@
  * Author:   Justin Fletcher
  ******************************************************************/
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "kernel.h"
 #include "swis.h"
 #include "i_sprite.h"
 #include "i_screeninfo.h"
 
 /* Define this to debug this file */
-#define DEBUG
+//#define DEBUG
 
 #ifndef BETA
 #undef DEBUG
@@ -29,41 +31,41 @@
 #endif
 
 struct sprite_s {
-    int     next_offset;
+    int32_t next_offset;
     char    name[12];
-    int     width_minus_1;
-    int     height_minus_1;
-    int     first_bit;
-    int     last_bit;
-    int     sprite_offset;
-    int     mask_offset;
-    unsigned long mode;
+    int32_t width_minus_1;
+    int32_t height_minus_1;
+    int32_t first_bit;
+    int32_t last_bit;
+    int32_t sprite_offset;
+    int32_t mask_offset;
+    uint32_t mode;
 };
 
 struct spritearea_s {
-    int     area_size;
-    int     nsprites;
-    int     first;
-    int     free;
+    int32_t area_size;
+    int32_t nsprites;
+    int32_t first;
+    int32_t free;
 };
 
 struct spritescreen_s {
     spritearea_t *area;
     sprite_t *sprite;
-    unsigned long *palette;
+    uint32_t *palette;
     byte *data;
-    int x, y;
-    int width;
-    int height;
-    int spritesize;
+    int32_t x, y;
+    int32_t width;
+    int32_t height;
+    int32_t spritesize;
     byte *colourtrans;
-    int colourtrans_update;
-    int use_scale;
+    int32_t colourtrans_update;
+    int32_t use_scale;
     struct scale_s {
-        int xmult;
-        int ymult;
-        int xdiv;
-        int ydiv;
+        int32_t xmult;
+        int32_t ymult;
+        int32_t xdiv;
+        int32_t ydiv;
     } scale;
 };
 
@@ -82,7 +84,7 @@ extern void spritescreen_free(void *block);
                 need_colourtrans = whether we should colourtrans when plotting:
  Returns:       pointer to the structure describing the data
  ******************************************************************/
-spritescreen_t *spritescreen_create(int w, int h, unsigned long mode,
+spritescreen_t *spritescreen_create(int w, int h, uint32_t mode,
                                     int l2bpp, int palsize,
                                     int need_colourtrans)
 {
@@ -179,7 +181,7 @@ spritescreen_t *spritescreen_create(int w, int h, unsigned long mode,
     }
     else
     {
-        unsigned long *modesel = (unsigned long *)mode;
+        uint32_t *modesel = (uint32_t *)mode;
         if (modesel[0] != 1)
             I_Error("Cannot create sprite screen (mode selector is not type 1)");
         /* Actually we don't really need any information from the mode selector */
@@ -187,7 +189,7 @@ spritescreen_t *spritescreen_create(int w, int h, unsigned long mode,
     }
     ss->data = ((byte*)ss->sprite) + ss->sprite->sprite_offset;
     if (palsize)
-        ss->palette = (unsigned long *)(((byte*)ss->sprite) + sizeof(sprite_t));
+        ss->palette = (uint32_t *)(((byte*)ss->sprite) + sizeof(sprite_t));
     else
         ss->palette = NULL;
     ss->spritesize = sprite_size;
@@ -205,7 +207,12 @@ spritescreen_t *spritescreen_create(int w, int h, unsigned long mode,
     /* Do a validate on the area, just to be sure that we built ti right */
     err = _swix(OS_SpriteOp, _INR(0, 1), 0x111, ss->area);
     if (err)
+    {
+#ifndef __riscos
+        os_write0(err->errmess);
+#endif
         I_Error("Sprite area validation failed: %s", err->errmess);
+    }
 
     return ss;
 }
@@ -236,7 +243,7 @@ void spritescreen_destroy(spritescreen_t *ss)
     }
 }
 
-void spritescreen_palette(spritescreen_t *ss, int colour, unsigned long pal)
+void spritescreen_palette(spritescreen_t *ss, int colour, uint32_t pal)
 {
     if (!ss->palette)
         return;
@@ -260,7 +267,7 @@ void spritescreen_blit(spritescreen_t *ss)
                 _swix(ColourTrans_GenerateTable,
                       _INR(0, 7),
                       256, ss->sprite, /* Source is a sprite */
-                      -1, -1, /* Dest is the screen */
+                      (uint32_t)-1, (uint32_t)-1, /* Dest is the screen */
                       pixtrans,
                       ((1<<0) | /* pointer to sprite */
                        (1<<4)), /* Use wide tables */

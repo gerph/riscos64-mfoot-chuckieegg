@@ -7,6 +7,7 @@
 #ifndef I_SPRITE_H
 #define I_SPRITE_H
 
+#include <stdint.h>
 #include "i_screeninfo.h"
 
 typedef struct sprite_s sprite_t;
@@ -27,14 +28,14 @@ typedef struct spritescreen_s spritescreen_t;
                 need_colourtrans = whether we should colourtrans when plotting
  Returns:       pointer to the structure describing the data
  ******************************************************************/
-spritescreen_t *spritescreen_create(int w, int h, unsigned long mode,
+spritescreen_t *spritescreen_create(int w, int h, uint32_t mode,
                                     int l2bpp, int palsize,
                                     int need_colourtrans);
 
 void spritescreen_origin(spritescreen_t *ss, int x, int y);
 void spritescreen_scaleto(spritescreen_t *ss, int w, int h);
 void spritescreen_destroy(spritescreen_t *ss);
-void spritescreen_palette(spritescreen_t *ss, int colour, unsigned long pal);
+void spritescreen_palette(spritescreen_t *ss, int colour, uint32_t pal);
 void spritescreen_blit(spritescreen_t *ss);
 
 byte *spritescreen_get_data(spritescreen_t *ss);
