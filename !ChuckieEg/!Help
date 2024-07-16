@@ -6,6 +6,8 @@ Copyright A & F Software.
 
 RISC OS conversion by Michael Foot.
 RISC OS version 1.03 (09 Feb 2003).
+Modified by Gerph (16 Jul 2024)
+
 
 INTRODUCTION
 ------------
@@ -33,12 +35,22 @@ Changing the value after the equals sign (=) will allow you to change the number
 COMPATIBILITY
 -------------
 
-This game will run on all RISC OS computers from ARM250, RISC OS 3.xx to StrongARM, RISC OS 4.xx.
+This game will run on all RISC OS computers from RISC OS 3.5 to StrongARM,
+RISC OS 4, 5, 6 and 7, and RISC OS 64.
+
+It has been actively tested on RISC OS Select, RISC OS 7 and RISC OS 64.
+
 
 KNOWN ISSUES
 ------------
 
-None.
+Runs rather slowly; might be due to excess use of VSyncs.
+
+AArch64 version:
+
+* Does not support file access for the scores and key layouts.
+* Must be run directly, rather than through the application.
+
 
 CREDITS
 -------
@@ -46,9 +58,17 @@ CREDITS
 BBC version by Doug Anderson and distributed by A & F Software.
 RISC OS conversion by Michael Foot.
 RISC OS screen address calculations by Thomas Harte.
+64bit version by Gerph.
+
 
 HISTORY
 -------
+Version 1.03gerph (16 Jul 2024)
+
+- Added rendering through the OS_SpriteOp calls, to make more system
+  independant.
+- Added AArch64 build for RISC OS 64.
+
 Version 1.03 (09 Feb 2003)
 
 - Made 26/32 bit compatible.
@@ -65,7 +85,10 @@ Version 1.00 (18 Apr 2001)
 
 - Initial version.
 
+
 LATER VERSIONS
 --------------
 
-The latest version can be obtained from my home page at <http://homepages.paradise.net.nz/mjfoot/>.
+The latest version of the original version can be obtained from my home page at <http://homepages.paradise.net.nz/mjfoot/>.
+
+This version can be downloaded found at <https://github.com/gerph/riscos64-mfoot-chuckieegg>.
