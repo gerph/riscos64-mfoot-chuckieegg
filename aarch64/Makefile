@@ -1,75 +1,130 @@
 # Makefile for building bin for aarch64
+#
+# Code compiles with:
+#
+#	__riscos
+#	__riscos64
+#   __aarch64__
+#
+# Norcroft defines not set:
+#	__acorn
+#	__arm
+
+TARGET ?= chuckie64
 
 USE_FUNC_SIGNATURE ?= 1
 
-DIS = ~/projects/RO/pyromaniac/utils/riscos-dumpi --arm64
 CROSS_ROOT = ${shell echo $$CROSS_ROOT}
 
-DEFAULT_GOAL = chuckie64,ff8
+ALL_TARGETS = chuckie64
 
-CFLAGS = -O1 -nostdlib -ffreestanding -march=armv8-a+nofp -DMODE_256
 
+# Remove the flags that might make code think it's compiling for linux system.
+CFLAGS = -U__linux -U__linux__ -U__unix__ -U__unix -Ulinux -Uunix -U__gnu_linux__
+
+# Add the definitions to indicate that we're compiling for RISC OS
+CFLAGS += -D__riscos -D__riscos64
+
+# Allow us to build without assuming the standard library is present
+CFLAGS += -nostdlib -ffreestanding -march=armv8-a
+#CFLAGS += -nostdlib -ffreestanding -march=armv8-a+nofp
+
+# Add the exports directory to those things we'll build with
+CFLAGS += -I${CLIBDIR}/riscos_headers/C -I${CLIBDIR}/riscos_headers/Lib/ -I${CLIBDIR}/riscos_headers/Lib/CLib/
+
+# Options to allow function signatures to appear RISC OS-like
 ifeq (${USE_FUNC_SIGNATURE},1)
 CFLAGS += -fpatchable-function-entry=20,20
 endif
 
-all: ${DEFAULT_GOAL}
+# Optimisation options
+CFLAGS += -O1
+
+# Options for this build
+CFLAGS += -I/ro64 -DMODE_256
+
+# Assembler flags
+AFLAGS = -march=armv8-a
+
+# Flags for the linker
+LDFLAGS = -T link.lnk -e _aif64_entry
+
+targetted:
+	make ${TARGET},ff8 TARGET=${TARGET}
+
+all:
+	for i in ${ALL_TARGETS} ; do make $$i,ff8 TARGET=$$i || exit $$? ; done
 
 shell: dockcross-linux-arm64
 	./dockcross-linux-arm64 bash
 
 dockcross-linux-arm64:
-	docker run --rm dockcross/linux-arm64:20240529-0dade71 > dockcross-linux-arm64
+	docker run --rm dockcross/linux-arm64:latest > dockcross-linux-arm64
 	chmod +x dockcross-linux-arm64
 
 clean:
-	-rm -f *.o *.bin *,ff8 *.map
+	-rm -f *.o *.a *.bin *,ff8 *.map
+
+CRT_OBJS = 	${CLIBDIR}/libcrt.a
 
 ifeq (${CROSS_ROOT},)
 # If we're outside the docker container, re-run ourselves inside the container
+
+CLIBDIR = /Users/charles/binblob/clib
+
 ifneq ($(filter-out all shell dockcross-linux-arm64 clean,${MAKECMDGOALS}),)
 # The command wasn't one of our invocation commands above
 .PHONY: ${MAKECMDGOALS}
-${MAKECMDGOALS}: dockcross-linux-arm64
-	cd .. ; aarch64/dockcross-linux-arm64 bash -c "cd aarch64 && make ${MAKECMDGOALS}"
+${MAKECMDGOALS}: dockcross-linux-arm64 ${CRT_OBJS}
+	cd .. ; aarch64/dockcross-linux-arm64 --args "-v ${CLIBDIR}:/ro64/clib" --  bash -c "cd aarch64 && make ${MAKECMDGOALS} TARGET=${TARGET}"
 else
 .PHONY: ${DEFAULT_GOAL}
-${DEFAULT_GOAL}: dockcross-linux-arm64
-	cd .. ; aarch64/dockcross-linux-arm64 bash -c "cd aarch64 && make ${DEFAULT_GOAL}"
+${DEFAULT_GOAL}: dockcross-linux-arm64 ${CRT_OBJS}
+	cd .. ; aarch64/dockcross-linux-arm64 --args "-v ${CLIBDIR}:/ro64/clib" --  bash -c "cd aarch64 && make ${DEFAULT_GOAL}"
 endif
 
+${CLIBDIR}/libcrt.a:
+	cd ${CLIBDIR}; make
+
 else
+# We are within the docker container
+
+CLIBDIR = /ro64/clib
+
+
+CC = aarch64-unknown-linux-gnu-gcc
+AS = aarch64-unknown-linux-gnu-as
+LD = aarch64-unknown-linux-gnu-ld
+OBJCOPY = aarch64-unknown-linux-gnu-objcopy
 
 OBJS       = main.o \
 			 execute.o \
 			 library.o \
 			 r6502main.o \
+			 malloc.o \
 			 i_sprite.o \
 			 i_screeninfo.o \
 			 exit.o \
-			 malloc.o \
-			 clib.o \
-			 clib-kernel.o
 
 %.o: %.c
-	aarch64-unknown-linux-gnu-gcc ${CFLAGS} -c -o $@ $?
+	${CC} ${CFLAGS} -c -o $@ $?
 
-chuckie64.bin: start.o swis.o link.lnk ${OBJS}
-	aarch64-unknown-linux-gnu-ld start.o swis.o ${OBJS} -T link.lnk -o $@
+%.o: %.s
+	${AS} ${AFLAGS} -o $@ $?
 
-chuckie64.map: start.o swis.o link.lnk ${OBJS}
-	aarch64-unknown-linux-gnu-ld start.o swis.o ${OBJS} -T link.lnk -Map $@ -o /dev/null
+${TARGET}.bin: link.lnk ${OBJS} ${CRT_OBJS}
+	${LD} ${OBJS} ${CRT_OBJS} ${LDFLAGS} -o $@
+
+${TARGET}.map: link.lnk ${OBJS} ${CRT_OBJS}
+	${LD} ${OBJS} ${CRT_OBJS} ${LDFLAGS} -Map $@ -o /dev/null
 
 ifeq (${USE_FUNC_SIGNATURE},1)
-chuckie64,ff8: chuckie64.bin chuckie64.map
-	aarch64-unknown-linux-gnu-objcopy -O binary -j .text chuckie64.bin $@
-	python riscos_symbols.py chuckie64.map chuckie64,ff8
+${TARGET},ff8: ${TARGET}.bin ${TARGET}.map
+	${OBJCOPY} -O binary -j .text ${TARGET}.bin $@
+	python riscos_symbols.py ${TARGET}.map ${TARGET},ff8
 else
-chuckie64,ff8: chuckie64.bin
-	aarch64-unknown-linux-gnu-objcopy -O binary -j .text chuckie64.bin $@
+${TARGET},ff8: ${TARGET}.bin
+	${OBJCOPY} -O binary -j .text ${TARGET}.bin $@
 endif
-
-start.o: start.s
-	aarch64-unknown-linux-gnu-gcc ${CFLAGS} -c -o $@ $?
 
 endif

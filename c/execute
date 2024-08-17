@@ -253,7 +253,7 @@ m2A1E:
   timer = clock() + 4;
   while (clock() < timer)
   {
-    _swix(OS_Byte, _IN(0), 19);
+    //_swix(OS_Byte, _IN(0), 19);
   }
 m2A27:
   LDA_ZEROP(0x3D)

@@ -24,10 +24,10 @@
 #define dprintf if (0) printf
 #endif
 
-#ifdef __riscos
-void __swi(OS_WriteN + 0x20000) os_writen(char *p, int l);
+#ifdef __riscos64
+#include "clib/swis-os.h"
 #else
-#define os_writen(p, l) _swix(OS_WriteN, _INR(0, 1), p, l)
+void __swi(OS_WriteN + 0x20000) os_writen(char *p, int l);
 #endif
 
 #define ModeVariable_ModeFlags      (0)

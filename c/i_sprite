@@ -9,6 +9,9 @@
 #include <stdio.h>
 #include "kernel.h"
 #include "swis.h"
+#ifdef __riscos64
+#include "clib/swis-os.h"
+#endif
 #include "i_sprite.h"
 #include "i_screeninfo.h"
 

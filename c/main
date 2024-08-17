@@ -19,10 +19,6 @@ FILE * hfile;
 int initial_lives;
 int initial_level;
 
-#ifndef __riscos
-#define main start
-#endif
-
 int main(void)
 {
   int i;

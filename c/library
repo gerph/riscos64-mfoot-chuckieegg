@@ -313,7 +313,7 @@ m1A48:
   timer = clock() + 40;
   while (clock() < timer)
   {
-    _swix(OS_Byte, _IN(0), 19); /* Wait for VSync */
+    //_swix(OS_Byte, _IN(0), 19); /* Wait for VSync */
   }
 
   /*RTS*/
@@ -2961,7 +2961,7 @@ m2C56:
   timer = clock() + 20;
   while (clock() < timer)
   {
-    _swix(OS_Byte, _IN(0), 19); /* Wait for VSync */
+    //_swix(OS_Byte, _IN(0), 19); /* Wait for VSync */
   }
   DEC_ZEROP(0x8A)
   BNE(m2C56)
@@ -3262,7 +3262,7 @@ void m2DA6(void)
     /*slow down*/
     while (clock() < timer)
     {
-      _swix(OS_Byte, _IN(0), 19); /* Wait for VSync */
+      //_swix(OS_Byte, _IN(0), 19); /* Wait for VSync */
     }
   }
   /*RTS*/
@@ -3530,7 +3530,7 @@ m2F88:
   timer = clock() + (duration << 1);
   while (clock() < timer)
   {
-    _swix(OS_Byte, _IN(0), 19); /* Wait for VSync */
+    //_swix(OS_Byte, _IN(0), 19); /* Wait for VSync */
   }
 
   DEC_ZEROP(0x8A)
@@ -3602,7 +3602,7 @@ void m3003(void)
   timer = clock() + 20;
   while (clock() < timer)
   {
-    _swix(OS_Byte, _IN(0), 19); /* Wait for VSync */
+    //_swix(OS_Byte, _IN(0), 19); /* Wait for VSync */
   }
   LDX_IMMED(0xB2)
   LDY_IMMED(0x0A)
