@@ -822,7 +822,7 @@ void blitscreen(void)
 }
 
 
-void initialise(void)
+int initialise(void)
 {
   /*set up keyboard translation table*/
   memory[0xF02B] = 0x03;
@@ -979,6 +979,7 @@ void initialise(void)
   escape = regs.r[1];
 
   _kernel_oscli("BeebSoundInitialise");
+  return 1; /* Successful */
 }
 
 void finalise(void)

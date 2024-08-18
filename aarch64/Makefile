@@ -41,7 +41,7 @@ endif
 CFLAGS += -O1
 
 # Options for this build
-CFLAGS += -I/ro64 -DMODE_256
+CFLAGS += -I/ro64 -DMODE_256 -DSET_CHANNELS
 
 # Assembler flags
 AFLAGS = -march=armv8-a
@@ -79,8 +79,8 @@ ${MAKECMDGOALS}: dockcross-linux-arm64 ${CRT_OBJS}
 	cd .. ; aarch64/dockcross-linux-arm64 --args "-v ${CLIBDIR}:/ro64/clib" --  bash -c "cd aarch64 && make ${MAKECMDGOALS} TARGET=${TARGET}"
 else
 .PHONY: ${DEFAULT_GOAL}
-${DEFAULT_GOAL}: dockcross-linux-arm64 ${CRT_OBJS}
-	cd .. ; aarch64/dockcross-linux-arm64 --args "-v ${CLIBDIR}:/ro64/clib" --  bash -c "cd aarch64 && make ${DEFAULT_GOAL}"
+${DEFAULT_GOAL}: dockcross-linux-arm64
+	cd .. ; aarch64/dockcross-linux-arm64 -- bash -c "cd aarch64 && make TARGET=${TARGET}"
 endif
 
 ${CLIBDIR}/libcrt.a:
