@@ -30,6 +30,8 @@ on:
   # Pull request events happen on pull request state transitions, so we probably don't want this here.
   #pull_request:
   #  branches: ["*"]
+  schedule:
+    - cron: "2 3 2 * *"  # Run once a month
 
 jobs:
   build-riscos:
