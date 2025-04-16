@@ -1,7 +1,9 @@
 # Chuckie Egg
 
 Chuckie Egg is an old BBC game, which has been converted to run on RISC OS
-by Michael Foot. His [webpage](https://mjfoot.netlify.app/riscos.htm) includes the downloads of the game.
+by Michael Foot. His
+[webpage](https://mjfoot.netlify.app/riscos.htm)
+includes the downloads of the game.
 
 This version of the game is a modification of one of the earlier versions
 which I had lying around, to add support for rendering the game using sprite
