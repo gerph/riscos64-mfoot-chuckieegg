@@ -25,7 +25,7 @@
 #endif
 
 #ifdef __riscos64
-#include "clib/swis-os.h"
+#include "swis_os.h"
 #else
 void __swi(OS_WriteN + 0x20000) os_writen(char *p, int l);
 #endif

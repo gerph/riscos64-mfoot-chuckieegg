@@ -10,6 +10,8 @@
 #	__acorn
 #	__arm
 
+RISCOS64_TOOLS_VERSION = 0.12
+
 TARGET ?= chuckie64
 
 USE_FUNC_SIGNATURE ?= 1
@@ -30,7 +32,7 @@ CFLAGS += -nostdlib -ffreestanding -march=armv8-a
 #CFLAGS += -nostdlib -ffreestanding -march=armv8-a+nofp
 
 # Add the exports directory to those things we'll build with
-CFLAGS += -I${CLIBDIR}/riscos_headers/C -I${CLIBDIR}/riscos_headers/Lib/ -I${CLIBDIR}/riscos_headers/Lib/CLib/
+CFLAGS += -I${CLIBDIR} -I${CLIBDIR}/C -I${CLIBDIR}/Lib/ -I${CLIBDIR}/Lib/CLib/
 
 # Options to allow function signatures to appear RISC OS-like
 ifeq (${USE_FUNC_SIGNATURE},1)
@@ -65,26 +67,33 @@ dockcross-linux-arm64:
 clean:
 	-rm -f *.o *.a *.bin *,ff8 *.map
 
+
 CRT_OBJS = 	${CLIBDIR}/libcrt.a
 
 ifeq (${CROSS_ROOT},)
 # If we're outside the docker container, re-run ourselves inside the container
 
-CLIBDIR = /Users/charles/binblob/clib
+CLIBDIR = ${PWD}/riscos64
+
+riscos64_clib: ${CLIBDIR}/kernel.h
+${CLIBDIR}/kernel.h: riscos64-clib.zip
+	mkdir -p ${CLIBDIR} && cd ${CLIBDIR} && unzip -o ${PWD}/riscos64-clib.zip
+
+riscos64-clib.zip:
+	wget -O $@ https://github.com/gerph/riscos64-simple-binaries/releases/download/v${RISCOS64_TOOLS_VERSION}/RISCOS64-CLib-${RISCOS64_TOOLS_VERSION}.zip
 
 ifneq ($(filter-out all shell dockcross-linux-arm64 clean,${MAKECMDGOALS}),)
 # The command wasn't one of our invocation commands above
-.PHONY: ${MAKECMDGOALS}
+.PHONY: ${MAKECMDGOALS} riscos64_clib
 ${MAKECMDGOALS}: dockcross-linux-arm64 ${CRT_OBJS}
 	cd .. ; aarch64/dockcross-linux-arm64 --args "-v ${CLIBDIR}:/ro64/clib" --  bash -c "cd aarch64 && make ${MAKECMDGOALS} TARGET=${TARGET}"
 else
-.PHONY: ${DEFAULT_GOAL}
+.PHONY: ${DEFAULT_GOAL} riscos64_clib
 ${DEFAULT_GOAL}: dockcross-linux-arm64
 	cd .. ; aarch64/dockcross-linux-arm64 -- bash -c "cd aarch64 && make TARGET=${TARGET}"
 endif
 
-${CLIBDIR}/libcrt.a:
-	cd ${CLIBDIR}; make
+${CLIBDIR}/libcrt.a: riscos64_clib
 
 else
 # We are within the docker container

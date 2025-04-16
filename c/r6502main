@@ -15,7 +15,7 @@
 #include "kernel.h"
 #include "swis.h"
 #ifdef __riscos64
-#include "clib/swis-os.h"
+#include "swis_os.h"
 #define bbcvdu(c) os_writec(c)
 #endif
 

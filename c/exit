@@ -1,5 +1,7 @@
 #include <stdio.h>
-#include "clib/swis-os.h"
+#ifdef __riscos64
+#include "swis_os.h"
+#endif
 
 void I_Error(char *s)
 {

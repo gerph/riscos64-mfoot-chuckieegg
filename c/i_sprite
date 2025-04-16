@@ -10,7 +10,7 @@
 #include "kernel.h"
 #include "swis.h"
 #ifdef __riscos64
-#include "clib/swis-os.h"
+#include "swis_os.h"
 #endif
 #include "i_sprite.h"
 #include "i_screeninfo.h"

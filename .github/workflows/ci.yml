@@ -101,6 +101,7 @@ jobs:
 
       - name: Build the aarch64 binary
         run: |
+          set -e
           cd aarch64
           make
           ls -alh

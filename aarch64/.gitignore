@@ -1,4 +1,6 @@
 dockcross-linux-arm64
+riscos64-clib.zip
+riscos64/
 *.o
 *.bin
 *.map
