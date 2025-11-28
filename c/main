@@ -1789,11 +1789,11 @@ int main(void)
 
   if (!initialise())
   {
-#ifdef __riscos
-     fprintf(stderr, "Failed to initialise game\n");
-#else
+#ifdef __riscos64
      os_write0("Failed to initialise game");
      os_newline();
+#else
+     fprintf(stderr, "Failed to initialise game\n");
 #endif
      return -1;
   }

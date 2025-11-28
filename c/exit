@@ -1,9 +1,11 @@
+#include <stdlib.h>
 #include <stdio.h>
 #include "swis.h"
+#include "swis_os.h"
 
 void I_Error(char *s)
 {
-#ifdef __riscos
+#ifndef __riscos64
     printf("Failed: %s\n", s);
 #else
     os_write0("Failed: ");

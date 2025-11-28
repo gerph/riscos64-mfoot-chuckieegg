@@ -19,11 +19,16 @@
 
 #define TIME_50HZ 2 /*CLK_TCK/50*/ /*50 times per second*/
 
+#ifdef __riscos64
+#include "swis_os.h"
+#define bbcvdu(c) os_writec(c)
+#else
 extern void bbcvdu(char);
+#endif
 extern void getscreenaddress(void);
 extern void blitscreen(void);
 #ifdef MODE_256
-extern void setmode256(void);
+extern void setmode_256(void);
 #endif
 extern void osword(void);
 extern void oswrch(char c);

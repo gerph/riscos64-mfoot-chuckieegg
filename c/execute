@@ -221,6 +221,10 @@ m29D8:
 
   /*WAIT_FOR_VERTICAL_SYNC*/
   blitscreen();
+  //{
+  //  int now = clock();
+  //  printf("%c%cwait %i\n", 4, 30, video_timer - clock());
+  //}
   while (clock() < video_timer)
   {
     //_swix(OS_Byte, _IN(0), 19);
