@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "kernel.h"
 #include "swis.h"
 #ifdef __riscos64
@@ -275,6 +276,7 @@ void spritescreen_blit(spritescreen_t *ss)
                       ((1<<0) | /* pointer to sprite */
                        (1<<4)), /* Use wide tables */
                       NULL, NULL);
+                ss->colourtrans_update = 0;
             }
         }
         if (ss->use_scale)

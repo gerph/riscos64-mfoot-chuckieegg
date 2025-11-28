@@ -9,6 +9,7 @@
 /*#define __JMP_BUF_SIZE 100*/
 
 /*#include <setjmp.h>*/
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -813,6 +814,8 @@ void getscreenaddress(void)
  */
   loc_video_addr = (int)spritescreen_get_data(screen);
   loc_video_linelen = screen_width;
+  assert(loc_video_linelen == 640);
+#define loc_video_linelen 640
 }
 
 
