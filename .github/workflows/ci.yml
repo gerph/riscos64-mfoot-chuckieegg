@@ -107,6 +107,7 @@ jobs:
         run: |
           set -e
           cd aarch64
+          make tools
           make
           ls -alh
           cd ..
