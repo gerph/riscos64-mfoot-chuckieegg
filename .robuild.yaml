@@ -16,6 +16,9 @@ jobs:
       "Sys$Environment": ROBuild
       "BUILD32": 1
 
+      # Faster builds
+      "Alias$AMU": "HostAMU %*0"
+
     # Directory to change to before running script
     #dir: <working directory>
 
